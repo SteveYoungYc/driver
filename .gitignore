@@ -3,3 +3,13 @@ build
 .tmp_versions
 .vscode
 compile_commands.json
+*.dts
+*.mod.c
+*.o
+*.order
+*.cmd
+*.symvers
+*.ko
+
+sr501_test
+at24c02_test

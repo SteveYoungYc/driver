@@ -17,3 +17,6 @@ fi
 
 #scp yc@10.0.2.2://home/yc/lab/project/driver/sr501/sr501_drv.ko .
 #scp yc@10.0.2.2://home/yc/lab/project/driver/sr501/sr501_test .
+
+#scp yc@10.0.2.2://home/yc/lab/project/driver/sr501/at24c02_drv.ko .
+#scp yc@10.0.2.2://home/yc/lab/project/driver/sr501/at24c02_test .
