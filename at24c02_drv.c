@@ -1,5 +1,5 @@
-#include "linux/device.h"
-#include "linux/fs.h"
+#include <linux/device.h>
+#include <linux/fs.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -27,7 +27,6 @@ static long at24c02_ioctl(struct file *file, unsigned int cmd, unsigned long arg
 	unsigned char data;
 	unsigned int ker_buf[2];
 	unsigned int *usr_buf = (unsigned int *)arg;
-	unsigned char byte_buf[2];
 	int ret;
 	
 	struct i2c_msg msgs[2];
@@ -55,18 +54,14 @@ static long at24c02_ioctl(struct file *file, unsigned int cmd, unsigned long arg
 		}
 		case IOC_AT24C02_WRITE: {
 			/* 写AT24C02 */
-			byte_buf[0] = addr;
-			byte_buf[1] = ker_buf[1];
-			
 			msgs[0].addr  = at24c02_client->addr;
 			msgs[0].flags = 0; /* 写 */
 			msgs[0].len   = 2;
-			msgs[0].buf   = byte_buf;
+			msgs[0].buf[0]   = addr;
+			msgs[0].buf[1]   = ker_buf[1];
 
 			i2c_transfer(at24c02_client->adapter, msgs, 1);
-
 			mdelay(20);
-			
 			break;
 		}
 	}
