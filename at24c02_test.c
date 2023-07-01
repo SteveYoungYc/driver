@@ -36,7 +36,6 @@ int main(int argc, char **argv) {
     } else {
         buf[0] = strtoul(argv[3], NULL, 0);
         buf[1] = strtoul(argv[4], NULL, 0);
-        ;
         ioctl(fd, IOC_AT24C02_WRITE, buf);
     }
 
