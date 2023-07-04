@@ -26,52 +26,9 @@ struct lcd_regs {
 
 static struct lcd_regs *mylcd_regs;
 static struct fb_info *myfb_info;
-static unsigned int pseudo_palette[16];
-
-/* from pxafb.c */
-static inline unsigned int chan_to_field(unsigned int chan,
-					 struct fb_bitfield *bf)
-{
-	chan &= 0xffff;
-	chan >>= 16 - bf->length;
-	return chan << bf->offset;
-}
-
-static int mylcd_setcolreg(unsigned regno,
-			       unsigned red, unsigned green, unsigned blue,
-			       unsigned transp, struct fb_info *info)
-{
-	unsigned int val;
-
-	/* dprintk("setcol: regno=%d, rgb=%d,%d,%d\n",
-		   regno, red, green, blue); */
-
-	switch (info->fix.visual) {
-	case FB_VISUAL_TRUECOLOR:
-		/* true-colour, use pseudo-palette */
-
-		if (regno < 16) {
-			u32 *pal = info->pseudo_palette;
-
-			val  = chan_to_field(red,   &info->var.red);
-			val |= chan_to_field(green, &info->var.green);
-			val |= chan_to_field(blue,  &info->var.blue);
-
-			pal[regno] = val;
-		}
-		break;
-
-	default:
-		return 1;	/* unknown type */
-	}
-
-	return 0;
-}
-
 
 static struct fb_ops myfb_ops = {
 	.owner		= THIS_MODULE,
-	.fb_setcolreg	= mylcd_setcolreg,
 	.fb_fillrect	= cfb_fillrect,
 	.fb_copyarea	= cfb_copyarea,
 	.fb_imageblit	= cfb_imageblit,
@@ -89,20 +46,15 @@ int __init lcd_drv_init(void)
 	/* a. var : LCD分辨率、颜色格式 */
 	myfb_info->var.xres_virtual = myfb_info->var.xres = 500;
 	myfb_info->var.yres_virtual = myfb_info->var.yres = 300;
-	
 	myfb_info->var.bits_per_pixel = 16;  /* rgb565 */
 	myfb_info->var.red.offset = 11;
 	myfb_info->var.red.length = 5;
-
 	myfb_info->var.green.offset = 5;
 	myfb_info->var.green.length = 6;
-
 	myfb_info->var.blue.offset = 0;
 	myfb_info->var.blue.length = 5;
 	
-
 	/* b. fix */
-	strcpy(myfb_info->fix.id, "100ask_lcd");
 	myfb_info->fix.smem_len = myfb_info->var.xres * myfb_info->var.yres * myfb_info->var.bits_per_pixel / 8;
 
 	/* fb的虚拟地址 */
@@ -116,8 +68,6 @@ int __init lcd_drv_init(void)
 	
 	/* c. fbops */
 	myfb_info->fbops = &myfb_ops;
-	myfb_info->pseudo_palette = pseudo_palette;
-
 
 	/* 1.3 注册fb_info */
 	register_framebuffer(myfb_info);
