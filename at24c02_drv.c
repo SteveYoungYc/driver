@@ -17,6 +17,7 @@
 
 #define IOC_AT24C02_READ  100
 #define IOC_AT24C02_WRITE 101
+#define IOC_AT24C02_WRITE_BYTES 102
 
 static int major;
 static struct class *at24c02_class;
@@ -25,13 +26,13 @@ static struct i2c_client *at24c02_client;
 static long at24c02_ioctl(struct file *file, unsigned int cmd, unsigned long arg) {
 	unsigned char addr;
 	unsigned char data;
-	unsigned int ker_buf[2];
-	unsigned int *usr_buf = (unsigned int *)arg;
+	unsigned char ker_buf[2];
+	unsigned char *usr_buf = (char *)arg;
 	unsigned char byte_buf[2];
 	int ret;
 	
 	struct i2c_msg msgs[2];
-	ret = copy_from_user(ker_buf, usr_buf, 8);
+	ret = copy_from_user(ker_buf, usr_buf, 2);
 	addr = ker_buf[0];
 	
 	switch (cmd) {
@@ -67,6 +68,23 @@ static long at24c02_ioctl(struct file *file, unsigned int cmd, unsigned long arg
 
 			mdelay(20);
 			
+			break;
+		}
+		case IOC_AT24C02_WRITE_BYTES: {
+			/* 写AT24C02 */
+			int len = ker_buf[1];
+			char *send_buf = (char *)kmalloc(len + 1, GFP_KERNEL);
+			send_buf[0] = addr;
+			ret = copy_from_user(send_buf + 1, usr_buf + 2, len);
+			msgs[0].addr  = at24c02_client->addr;
+			msgs[0].flags = 0; /* 写 */
+			msgs[0].len   = len + 1;
+			msgs[0].buf   = send_buf;
+
+			i2c_transfer(at24c02_client->adapter, msgs, 1);
+
+			mdelay(20);
+			kfree(send_buf);
 			break;
 		}
 	}
