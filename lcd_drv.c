@@ -104,20 +104,15 @@ int __init lcd_drv_init(void)
 	/* b. fix */
 	strcpy(myfb_info->fix.id, "100ask_lcd");
 	myfb_info->fix.smem_len = myfb_info->var.xres * myfb_info->var.yres * myfb_info->var.bits_per_pixel / 8;
-	if (myfb_info->var.bits_per_pixel == 24)
-		myfb_info->fix.smem_len = myfb_info->var.xres * myfb_info->var.yres * 4;
-
 
 	/* fb的虚拟地址 */
 	myfb_info->screen_base = dma_alloc_wc(NULL, myfb_info->fix.smem_len, &phy_addr, GFP_KERNEL);
-	myfb_info->fix.smem_start = phy_addr;  /* fb的物理地址 */
+	/* fb的物理地址 */
+	myfb_info->fix.smem_start = phy_addr;
 	
 	myfb_info->fix.type = FB_TYPE_PACKED_PIXELS;
 	myfb_info->fix.visual = FB_VISUAL_TRUECOLOR;
-
 	myfb_info->fix.line_length = myfb_info->var.xres * myfb_info->var.bits_per_pixel / 8;
-	if (myfb_info->var.bits_per_pixel == 24)
-		myfb_info->fix.line_length = myfb_info->var.xres * 4;
 	
 	/* c. fbops */
 	myfb_info->fbops = &myfb_ops;
@@ -130,9 +125,9 @@ int __init lcd_drv_init(void)
 	/* 1.4 硬件操作 */
 	mylcd_regs = ioremap(0x021C8000, sizeof(struct lcd_regs));
 	mylcd_regs->fb_base_phys = phy_addr;
-	mylcd_regs->fb_xres = 500;
-	mylcd_regs->fb_yres = 300;
-	mylcd_regs->fb_bpp  = 16;
+	mylcd_regs->fb_xres = myfb_info->var.xres;
+	mylcd_regs->fb_yres = myfb_info->var.yres;
+	mylcd_regs->fb_bpp  = myfb_info->var.bits_per_pixel;
 
 	return 0;
 }
