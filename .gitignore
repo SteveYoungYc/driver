@@ -11,5 +11,6 @@ compile_commands.json
 *.symvers
 *.ko
 
+key_test
 sr501_test
 at24c02_test
