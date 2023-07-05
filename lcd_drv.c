@@ -34,10 +34,20 @@ static struct fb_ops myfb_ops = {
 	.fb_imageblit	= cfb_imageblit,
 };
 
-/* 1. 入口 */
-int __init lcd_drv_init(void)
-{
+static const struct of_device_id lcd_match_table[] = {
+    {.compatible = "100ask,lcd"},
+    {},
+};
+
+static int lcd_probe(struct platform_device *pdev) {
+    unsigned int fb_base_phys_value;
 	dma_addr_t phy_addr;
+	printk("lcd probed\n");
+
+    // 0 从设备树节点的 "reg" 属性读取寄存器值
+    if (of_property_read_u32(pdev->dev.of_node, "reg", &fb_base_phys_value) != 0) {
+        return -1;
+    }
 	
 	/* 1.1 分配fb_info */
 	myfb_info = framebuffer_alloc(0, NULL);
@@ -73,7 +83,7 @@ int __init lcd_drv_init(void)
 	register_framebuffer(myfb_info);
 
 	/* 1.4 硬件操作 */
-	mylcd_regs = ioremap(0x021C8000, sizeof(struct lcd_regs));
+	mylcd_regs = ioremap(fb_base_phys_value, sizeof(struct lcd_regs));
 	mylcd_regs->fb_base_phys = phy_addr;
 	mylcd_regs->fb_xres = myfb_info->var.xres;
 	mylcd_regs->fb_yres = myfb_info->var.yres;
@@ -82,17 +92,36 @@ int __init lcd_drv_init(void)
 	return 0;
 }
 
-/* 2. 出口 */
-static void __exit lcd_drv_exit(void)
-{
+static int lcd_remove(struct platform_device *pdev) {
 	/* 反过来操作 */
 	/* 2.1 反注册fb_info */
 	unregister_framebuffer(myfb_info);
-
 	/* 2.2 释放fb_info */
 	framebuffer_release(myfb_info);
-	
 	iounmap(mylcd_regs);
+	return 0;
+}
+
+static struct platform_driver lcd_driver = {
+    .probe = lcd_probe,
+    .remove = lcd_remove,
+    .driver =
+        {
+            .name = "lcd",
+            .of_match_table = lcd_match_table,
+        },
+};
+
+/* 1. 入口 */
+int __init lcd_drv_init(void)
+{
+	return platform_driver_register(&lcd_driver);
+}
+
+/* 2. 出口 */
+static void __exit lcd_drv_exit(void)
+{
+	platform_driver_unregister(&lcd_driver);
 }
 
 module_init(lcd_drv_init);
