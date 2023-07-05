@@ -33,16 +33,12 @@ static struct input_dev *g_input_dev;
 
 static irqreturn_t input_dev_isr(int irq, void *dev_id) {
 	/* read data */
-    int val;
     int key_val;
     struct key_info *key = dev_id;
-    
     key_val = gpiod_get_value(key->gpiod);
-    val = (key->gpio << 8) | key_val;
-
-	printk("key_isr key %d irq happened, val: %d\n", key->gpio, val);
+	printk("key_isr key %d irq happened, val: %d\n", key->gpio, key_val);
 	/* report data */
-	input_event(g_input_dev, EV_KEY, BTN_TOUCH, val);
+	input_event(g_input_dev, EV_KEY, key->gpio, key_val);
 	input_sync(g_input_dev);
 	
 	return IRQ_HANDLED;
@@ -62,7 +58,7 @@ static int input_dev_probe(struct platform_device *pdev) {
         printk("No gpio of key available\n");
         return -1;
     }
-    printk("GPIO count: %d\n", key_num);
+    printk("key input dev probed\n");
 
 	keys = kzalloc(sizeof(struct key_info) * key_num, GFP_KERNEL);
     for (i = 0; i < key_num; i++) {
@@ -78,17 +74,28 @@ static int input_dev_probe(struct platform_device *pdev) {
 	g_input_dev->phys = "input_dev";
 	g_input_dev->dev.parent = dev;
 	g_input_dev->id.bustype = BUS_HOST;
+	g_input_dev->id.product = 1;
+	g_input_dev->id.version = 2;
 	/* set 1: which type event ? */
 	__set_bit(EV_KEY, g_input_dev->evbit);
+	__set_bit(INPUT_PROP_DIRECT, g_input_dev->propbit);
 	/* set 2: which event ? */
 	__set_bit(BTN_TOUCH, g_input_dev->keybit);
 	/* set 3: event params ? */
 	error = input_register_device(g_input_dev);
+	if (error) {
+		printk("input_register_device failed\n");
+		return -1;
+	}
 
 	/* hardware opration */
     for (i = 0; i < key_num; i++) {
         error = request_irq(keys[i].irq, input_dev_isr, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING, "input_dev_irq", &keys[i]);
-    }
+		if (error) {
+			printk("request_irq failed\n");
+			return -1;
+		}
+	}
 	return 0;
 }
 
