@@ -53,7 +53,7 @@ static int lcd_probe(struct platform_device *pdev) {
 	myfb_info = framebuffer_alloc(0, NULL);
 
 	/* 1.2 设置fb_info */
-	/* a. var : LCD分辨率、颜色格式 */
+	/* a. 可变参数 : LCD分辨率、颜色格式 */
 	myfb_info->var.xres_virtual = myfb_info->var.xres = 500;
 	myfb_info->var.yres_virtual = myfb_info->var.yres = 300;
 	myfb_info->var.bits_per_pixel = 16;  /* rgb565 */
@@ -64,7 +64,7 @@ static int lcd_probe(struct platform_device *pdev) {
 	myfb_info->var.blue.offset = 0;
 	myfb_info->var.blue.length = 5;
 	
-	/* b. fix */
+	/* b. 固定参数 */
 	myfb_info->fix.smem_len = myfb_info->var.xres * myfb_info->var.yres * myfb_info->var.bits_per_pixel / 8;
 
 	/* fb的虚拟地址 */
@@ -93,10 +93,7 @@ static int lcd_probe(struct platform_device *pdev) {
 }
 
 static int lcd_remove(struct platform_device *pdev) {
-	/* 反过来操作 */
-	/* 2.1 反注册fb_info */
 	unregister_framebuffer(myfb_info);
-	/* 2.2 释放fb_info */
 	framebuffer_release(myfb_info);
 	iounmap(mylcd_regs);
 	return 0;
@@ -113,14 +110,12 @@ static struct platform_driver lcd_driver = {
 };
 
 /* 1. 入口 */
-int __init lcd_drv_init(void)
-{
+int __init lcd_drv_init(void) {
 	return platform_driver_register(&lcd_driver);
 }
 
 /* 2. 出口 */
-static void __exit lcd_drv_exit(void)
-{
+static void __exit lcd_drv_exit(void) {
 	platform_driver_unregister(&lcd_driver);
 }
 
