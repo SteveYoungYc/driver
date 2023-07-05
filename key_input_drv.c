@@ -98,6 +98,7 @@ static int input_dev_remove(struct platform_device *pdev) {
         free_irq(keys[i].irq, NULL);
     }
 	input_unregister_device(g_input_dev);
+	kfree(keys);
 	return 0;
 }
 
