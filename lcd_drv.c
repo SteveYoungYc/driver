@@ -1,3 +1,4 @@
+#include "linux/printk.h"
 #include <asm/div64.h>
 #include <asm/mach/map.h>
 #include <linux/clk.h>
@@ -27,11 +28,40 @@ struct lcd_regs {
 static struct lcd_regs *mylcd_regs;
 static struct fb_info *myfb_info;
 
+static int myfb_mmap(struct fb_info *info, struct vm_area_struct *vma) {
+    unsigned long start = vma->vm_start; // 用户空间虚拟地址的起始
+    /* vma->vm_end - vma->vm_start = 303104 向上对其到4096
+        而info->fix.smem_len = 300000
+        vm_pgoff为0
+    */
+    unsigned long size = info->fix.smem_len; // 映射区域大小
+    unsigned long offset = (vma->vm_pgoff << PAGE_SHIFT) + info->fix.smem_start; // 映射物理地址的起始
+    
+    // dump_stack();
+    printk("size: %lu\n", size);
+    printk("vma start: %lu, end: %lu\n", vma->vm_start, vma->vm_end);
+    printk("smem_start: %lu\n", info->fix.smem_start);
+    printk("offset: %lu\n", offset);
+    // 检查映射请求的范围是否在 Framebuffer 内存区域内
+    if (offset + size > info->fix.smem_start + info->fix.smem_len) {
+        printk(KERN_ERR "myfb_mmap: Invalid mmap request\n");
+        return -EINVAL;
+    }
+
+    // 将物理地址映射到用户空间虚拟地址
+    if (remap_pfn_range(vma, start, offset >> PAGE_SHIFT, size, vma->vm_page_prot)) {
+        printk(KERN_ERR "myfb_mmap: Failed to remap framebuffer\n");
+        return -EAGAIN;
+    }
+    return 0;
+}
+
 static struct fb_ops myfb_ops = {
 	.owner		= THIS_MODULE,
 	.fb_fillrect	= cfb_fillrect,
 	.fb_copyarea	= cfb_copyarea,
 	.fb_imageblit	= cfb_imageblit,
+	.fb_mmap		= myfb_mmap,
 };
 
 static const struct of_device_id lcd_match_table[] = {
