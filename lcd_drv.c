@@ -27,6 +27,7 @@ struct lcd_regs {
 
 static struct lcd_regs *mylcd_regs;
 static struct fb_info *myfb_info;
+static dma_addr_t *buffer;
 
 static int myfb_mmap(struct fb_info *info, struct vm_area_struct *vma) {
   unsigned long start = vma->vm_start; // 用户空间虚拟地址的起始
@@ -102,8 +103,15 @@ static int lcd_probe(struct platform_device *pdev) {
                             myfb_info->var.bits_per_pixel / 8;
 
   /* fb的虚拟地址 */
-  myfb_info->screen_base =
-      dma_alloc_wc(NULL, myfb_info->fix.smem_len, &phy_addr, GFP_KERNEL);
+  buffer = kmalloc(myfb_info->fix.smem_len, GFP_KERNEL);
+  myfb_info->screen_base = (char *)buffer;
+  phy_addr = dma_map_single(&pdev->dev, buffer, myfb_info->fix.smem_len, DMA_TO_DEVICE);
+  if (dma_mapping_error(&pdev->dev, phy_addr)) {
+    framebuffer_release(myfb_info);
+    kfree(buffer);
+    printk("dma mapping error!\n");
+    return -1;
+  }
   /* fb的物理地址 */
   myfb_info->fix.smem_start = phy_addr;
 
@@ -131,6 +139,10 @@ static int lcd_probe(struct platform_device *pdev) {
 static int lcd_remove(struct platform_device *pdev) {
   unregister_framebuffer(myfb_info);
   framebuffer_release(myfb_info);
+  // 传输完成后，取消内存映射
+  dma_unmap_single(&pdev->dev, *buffer, myfb_info->fix.smem_len, DMA_TO_DEVICE);
+  // 使用完毕后，释放内存
+  kfree(buffer);
   iounmap(mylcd_regs);
   return 0;
 }
@@ -159,3 +171,19 @@ module_exit(lcd_drv_exit);
 MODULE_AUTHOR("www.100ask.net");
 MODULE_DESCRIPTION("Framebuffer driver for the linux");
 MODULE_LICENSE("GPL");
+
+/*
+static inline void *dma_alloc_coherent(struct device *dev, size_t size,
+		dma_addr_t *dma_handle, gfp_t flag)
+{
+	return dma_alloc_attrs(dev, size, dma_handle, flag, 0);
+}
+
+static inline void *dma_alloc_wc(struct device *dev, size_t size,
+				 dma_addr_t *dma_addr, gfp_t gfp)
+{
+	return dma_alloc_attrs(dev, size, dma_addr, gfp,
+			       DMA_ATTR_WRITE_COMBINE);
+}
+
+*/
