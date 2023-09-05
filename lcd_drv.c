@@ -35,17 +35,17 @@ static int myfb_mmap(struct fb_info *info, struct vm_area_struct *vma) {
       而info->fix.smem_len = 300000
       vm_pgoff为0
   */
-  unsigned long size = info->fix.smem_len; // 映射区域大小
+  unsigned long size = vma->vm_end - vma->vm_start; // 映射区域大小
   unsigned long offset = (vma->vm_pgoff << PAGE_SHIFT) +
                          info->fix.smem_start; // 映射物理地址的起始
 
   // dump_stack();
-  printk("size: %lu\n", size);
-  printk("vma start: %lu, end: %lu\n", vma->vm_start, vma->vm_end);
-  printk("smem_start: %lu\n", info->fix.smem_start);
-  printk("offset: %lu\n", offset);
+  printk("size: %lx\n", size);
+  printk("vma start: %lx, end: %lx\n", vma->vm_start, vma->vm_end);
+  printk("smem_start: %lx\n", info->fix.smem_start);
+  printk("offset: %lx\n", offset);
   // 检查映射请求的范围是否在 Framebuffer 内存区域内
-  if (offset + size > info->fix.smem_start + info->fix.smem_len) {
+  if (offset + size > info->fix.smem_start + round_up(info->fix.smem_len, PAGE_SIZE)) {
     printk(KERN_ERR "myfb_mmap: Invalid mmap request\n");
     return -EINVAL;
   }
